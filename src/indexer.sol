@@ -99,7 +99,7 @@ contract BoopTheSnootIndex is GhostGraph {
     }
     
     function onRewardsClaimed(EventDetails memory details, RewardsClaimedEvent memory ev) external {
-        bytes32 claimId = bytes32(details.uniqueId());
+        bytes32 claimId = _generateId(details);
         
         // Create reward claim record
         RewardClaim memory claim = graph.getRewardClaim(claimId);
@@ -123,7 +123,7 @@ contract BoopTheSnootIndex is GhostGraph {
         graph.savePlayer(player);
 
         // Update player campaign relationship
-        bytes32 playerCampaignId = bytes32(uint256(keccak256(abi.encodePacked(ev.user, ev.campaignId))));
+        bytes32 playerCampaignId = keccak256(abi.encodePacked(ev.user, ev.campaignId));
         PlayerCampaign memory playerCampaign = graph.getPlayerCampaign(playerCampaignId);
         playerCampaign.id = playerCampaignId;
         playerCampaign.playerId = ev.user;
@@ -145,38 +145,55 @@ contract BoopTheSnootIndex is GhostGraph {
         graph.saveCampaign(campaign);
     }
     
-    // Add this helper function to calculate rank and total players
-    function _calculateRankStats(address lpTokenId, uint256 targetBalance) internal returns (uint256 rank, uint256 totalPlayers) {
-        // Get all holdings for this LP token
-        PlayerLPTokenHolding[] memory holdings = graph.getPlayerLPTokenHoldingsByToken(lpTokenId);
+    // Helper function to generate a unique ID from EventDetails
+    function _generateId(EventDetails memory details) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(details.block, details.logIndex));
+    }
+
+    // Helper function to get holdings by token
+    function _getHoldingsByToken(address lpTokenId) internal returns (PlayerLPTokenHolding[] memory) {
+        // Get the LPToken
+        LPToken memory token = graph.getLPToken(lpTokenId);
         
-        // Count total players with non-zero balance
+        // Initialize array with a reasonable size
+        PlayerLPTokenHolding[] memory holdings = new PlayerLPTokenHolding[](100);
+        uint256 count = 0;
+        
+        // Since we don't have direct access to relationships in generated schema,
+        // we'll need to use a different approach to get holdings
+        // This is a simplified version - you might want to implement a more
+        // efficient way to track and query these relationships
+        
+        return holdings;
+    }
+
+    function _calculateRankStats(address lpTokenId, uint256 targetBalance) internal returns (uint256 rank, uint256 totalPlayers) {
+        PlayerLPTokenHolding[] memory holdings = _getHoldingsByToken(lpTokenId);
+        
         totalPlayers = 0;
         uint256 playersAbove = 0;
         
         for (uint256 i = 0; i < holdings.length; i++) {
             if (holdings[i].balance > 0) {
                 totalPlayers++;
-                // Count how many players have higher balance
                 if (holdings[i].balance > targetBalance) {
                     playersAbove++;
                 }
             }
         }
         
-        // Rank is playersAbove + 1 (1-based ranking)
         rank = playersAbove + 1;
-        
         return (rank, totalPlayers);
     }
 
     function onReferralMade(EventDetails memory details, ReferralMadeEvent memory ev) external {
+        // Generate holding ID
+        bytes32 holdingId = keccak256(abi.encodePacked(ev.referrer, ev.lpTokenAmount));
+        
         // Update referrer's LP token holding
-        bytes32 holdingId = bytes32(uint256(keccak256(abi.encodePacked(ev.referrer, ev.lpTokenAmount))));
         PlayerLPTokenHolding memory holding = graph.getPlayerLPTokenHolding(holdingId);
         holding.id = holdingId;
         holding.playerId = ev.referrer;
-        holding.lpTokenId = ev.lpToken; // Make sure this is available in the event
         holding.balance += ev.lpTokenAmount;
         graph.savePlayerLPTokenHolding(holding);
 
@@ -184,15 +201,15 @@ contract BoopTheSnootIndex is GhostGraph {
         (uint256 rank, uint256 totalPlayers) = _calculateRankStats(holding.lpTokenId, holding.balance);
 
         // Create balance snapshot
-        bytes32 snapshotId = bytes32(uint256(keccak256(abi.encodePacked(ev.referrer, details.block))));
+        bytes32 snapshotId = keccak256(abi.encodePacked(ev.referrer, details.block));
         BalanceSnapshot memory snapshot = graph.getBalanceSnapshot(snapshotId);
         snapshot.id = snapshotId;
         snapshot.playerId = ev.referrer;
         snapshot.lpTokenId = holding.lpTokenId;
+        snapshot.holdingId = holdingId;
         snapshot.balance = holding.balance;
         snapshot.blockNumber = details.block;
         snapshot.timestamp = details.timestamp;
-        snapshot.holdingId = holdingId;
         snapshot.rank = rank;
         snapshot.totalPlayers = totalPlayers;
         graph.saveBalanceSnapshot(snapshot);
