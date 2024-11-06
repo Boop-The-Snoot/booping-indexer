@@ -23,12 +23,8 @@ contract BoopTheSnootIndex is GhostGraph {
     }
     
     function onUnpaused(EventDetails memory details, UnpausedEvent memory ev) external {
-        // Track system state
-        SystemState memory state = graph.getSystemState("GLOBAL");
-        state.isPaused = false;
-        state.lastUnpausedAt = details.timestamp;
-        state.lastUnpausedTx = details.transactionHash;
-        graph.saveSystemState(state);
+        // optionally handle this event
+        // be sure to store your entities using graph.save<entity>
     }
     
     function onUnclaimedRewardsWithdrawn(EventDetails memory details, UnclaimedRewardsWithdrawnEvent memory ev) external {
@@ -208,12 +204,8 @@ contract BoopTheSnootIndex is GhostGraph {
     }
     
     function onPaused(EventDetails memory details, PausedEvent memory ev) external {
-        // Track system state
-        SystemState memory state = graph.getSystemState("GLOBAL");
-        state.isPaused = true;
-        state.lastPausedAt = details.timestamp;
-        state.lastPausedTx = details.transactionHash;
-        graph.saveSystemState(state);
+        // optionally handle this event
+        // be sure to store your entities using graph.save<entity>
     }
     
     function onMinLpTokenAmountUpdated(EventDetails memory details, MinLpTokenAmountUpdatedEvent memory ev) external {
