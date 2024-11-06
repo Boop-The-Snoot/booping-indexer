@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: Business Source License 1.1
 
-pragma solidity ^0.8.28;
-
 interface Events {
 	event Unpaused(address account);
 	event UnclaimedRewardsWithdrawn(uint256 indexed campaignId, uint256 amount, address indexed recipient);
