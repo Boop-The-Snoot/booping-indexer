@@ -13,7 +13,7 @@ interface IERC20 {
     function totalSupply() external view returns (uint256);
 }
 
-contract BoopTheSnootIndex is GhostGraph {
+contract MyIndex is GhostGraph {
     using StringHelpers for EventDetails;
     using StringHelpers for uint256;
     using StringHelpers for address;
